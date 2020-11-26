@@ -1,8 +1,8 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import Layout from '../componentes/Layout';
 import Form from '../componentes/Form';
 import Tasks from '../componentes/Tasks';
-import shortid from 'shortid';
+import {firebase} from '../firebase';
 
 const App = () => {
 
@@ -12,6 +12,20 @@ const App = () => {
     const [error, setError] = useState(null);
     const [id, setId] = useState('');
 
+    useEffect(() => {
+        const getData = async () => {
+            const db = firebase.firestore();
+            try{
+                const data = await db.collection('tareas').get();
+                const arrayData = data.docs.map(doc => ({id: doc.id,  ...doc.data()}));
+                setTasks(arrayData);
+            }catch(error){
+                console.log(error);
+            }
+        }
+        getData();
+    }, [])
+
     //Create
     const addTask = e => {
         e.preventDefault();
@@ -19,10 +33,20 @@ const App = () => {
             setError('Write a task!');
             return;
         }
-        setTasks([...tasks, { taskName: task, id: shortid.generate() } ]);
-        e.target[0].value = '';
-        setTask('');
-        setError(null);
+
+        const db = firebase.firestore();
+        try{
+            const newTask = {
+                taskName: task,
+                date: Date.now()
+            }
+            const data = db.collection('tareas').add(newTask);
+            setTasks([...tasks, {...newTask, id: data.id}]);
+            setTask('');
+            setError(null);
+        }catch(error){
+
+        }
     }
 
     //Update
@@ -32,23 +56,32 @@ const App = () => {
         setId(task.id);
     }
 
-    const editTask = event => {
+    const editTask = async event => {
         event.preventDefault();
         if(!task.trim()){
             setError('Write a task!');
             return;
         }
-        const editingArray = tasks.map(taskItem => taskItem.id === id ? {id: id, taskName: task} : taskItem);
-        setTasks(editingArray);
-        event.target[0].value = '';
-        setEditionMode(false);
-        setTask('');
-        setId('');
-        setError(null); 
+        const db = firebase.firestore(); 
+        try{
+            await db.collection('tareas').doc(id).update({
+                taskName: task
+            });
+            const editingArray = tasks.map(taskItem => taskItem.id === id ? {id: id, taskName: task} : taskItem);
+            setTasks(editingArray);
+            setEditionMode(false);
+            setTask('');
+            setId('');
+            setError(null);
+        }catch(error){
+
+        }
     }
 
     //Delete
-    const deleteTask = id => {
+    const deleteTask = async id => {
+        const db = firebase.firestore();
+        await db.collection('tareas').doc(id).delete();
         const arrayTasks = tasks.filter(task => task.id !== id);
         setTasks(arrayTasks);
     }

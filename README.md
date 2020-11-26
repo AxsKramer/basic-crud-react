@@ -1,5 +1,6 @@
-# Basic CRUD React
+# Basic CRUD React using Firestore
 A simple project to practice the CRUD functions using React library.
+Added a Firestore Database using Firebase.
 
 #### Inline code
 
